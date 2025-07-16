@@ -1,5 +1,4 @@
 from datetime import date, timedelta, datetime
-
 import Utils as util
 from Utils import TIPOS_HABITACION
 
@@ -59,10 +58,48 @@ class Habitacion:
         self.numero = numero
         self.tipo = tipo
         self.precio_noche = precio_noche
-        self.disponible = True
+        self.reservas_activas = []  # Lista de reservas activas para verificar disponibilidad por fechas
+    
+    def esta_disponible_en_fechas(self, fecha_ingreso, fecha_salida):
+        """
+        Verifica si la habitación está disponible en el rango de fechas especificado
+        """
+        fecha_ingreso_dt = datetime.strptime(fecha_ingreso, "%Y-%m-%d").date()
+        fecha_salida_dt = datetime.strptime(fecha_salida, "%Y-%m-%d").date()
+        
+        for reserva in self.reservas_activas:
+            if not reserva.activa:
+                continue
+                
+            reserva_ingreso = datetime.strptime(reserva.fecha_ingreso, "%Y-%m-%d").date()
+            reserva_salida = datetime.strptime(reserva.fecha_salida, "%Y-%m-%d").date()
+            
+            # Verificar si hay solapamiento de fechas
+            if not (fecha_salida_dt <= reserva_ingreso or fecha_ingreso_dt >= reserva_salida):
+                return False
+        
+        return True
+    
+    def agregar_reserva(self, reserva):
+        """Agrega una reserva a la lista de reservas activas de la habitación"""
+        self.reservas_activas.append(reserva)
+    
+    def liberar_reserva(self, reserva):
+        """Marca una reserva como inactiva (no la elimina para mantener historial)"""
+        if reserva in self.reservas_activas:
+            reserva.activa = False
     
     def info_habitacion(self):
-        return f"Hab. {self.numero} ({self.tipo}) - ${self.precio_noche}/noche - {'Disponible' if self.disponible else 'Ocupada'}"
+        # Obtener reservas activas
+        reservas_activas = [r for r in self.reservas_activas if r.activa]
+        
+        if reservas_activas:
+            info = f"Hab. {self.numero} ({self.tipo}) - ${self.precio_noche}/noche - {len(reservas_activas)} reserva(s):"
+            for i, reserva in enumerate(reservas_activas, 1):
+                info += f"\n    {i}. {reserva.fecha_ingreso} al {reserva.fecha_salida} ({reserva.huesped.nombre} {reserva.huesped.apellido})"
+            return info
+        else:
+            return f"Hab. {self.numero} ({self.tipo}) - ${self.precio_noche}/noche - Disponible"
 
 class Reserva:
     def __init__(self, id_reserva, huesped, habitacion, fecha_ingreso, num_noches, activa=True):
@@ -127,6 +164,7 @@ class SistemaHotel:
         self.next_reserva_id = 1
         self.usuarios_admin = {"admin": "admin123","luna": "luna123"}
         self.tipos_habitacion = TIPOS_HABITACION
+        self.efectivo = 0.0
     
     def consultar_huespedes(self):
         if not self.huespedes:
@@ -199,12 +237,13 @@ class SistemaHotel:
         print(f"Huésped registrado exitosamente: {nuevo_huesped.nombre} {nuevo_huesped.apellido} (ID: {nuevo_huesped.id})")
         return nuevo_huesped
     
-    def realizar_reserva(self, huesped, tipo_habitacion=None, fecha_ingreso=None, num_noches=None):
+    def realizar_reserva(self, huesped, fecha_ingreso=None, num_noches=None, numero_habitacion=None):
         if not huesped:
             print("Debe ingresar un huésped válido.")
             return False
         
-        if not (tipo_habitacion and fecha_ingreso and num_noches):
+        # Si no se proporcionan todos los parámetros, pedirlos al usuario
+        if fecha_ingreso is None or num_noches is None:
             fecha_ingreso = util.pedir_fecha()
             while True:
                 input_noches = input("Número de noches: ")
@@ -213,45 +252,90 @@ class SistemaHotel:
                     if num_noches > 0:
                         break
         else:
-            num_noches = int(num_noches)
-            if not util.validar_fecha(fecha_ingreso) or not util.validar_numero(num_noches, "Número de noches") or not num_noches > 0:
+            # Validar parámetros proporcionados
+            if not util.validar_fecha(fecha_ingreso):
+                print("Fecha de ingreso inválida.")
+                return False
+            
+            if not isinstance(num_noches, int):
+                num_noches = util.validar_numero(str(num_noches), "Número de noches")
+                if not num_noches:
+                    return False
+            
+            if num_noches <= 0:
+                print("El número de noches debe ser mayor a 0.")
                 return False
 
-        # Mostrar habitaciones disponibles
-        habitaciones_disponibles = {}
-        for habitacion in self.habitaciones:
-            if habitacion.disponible:
-                print(habitacion.info_habitacion())
-                habitaciones_disponibles[habitacion.numero] = habitacion
+        # Consultar disponibilidad usando la función existente (modo silencioso)
+        habitaciones_disponibles = self.consultar_disponibilidad(fecha_ingreso, num_noches, mostrar_info=False)
         
-        if habitaciones_disponibles:
-            numeros_disponibles = list(habitaciones_disponibles.keys())
-            print(f"Habitaciones disponibles: {numeros_disponibles}")
+        # Si no hay habitaciones disponibles, finalizar
+        if not habitaciones_disponibles:
+            print("❌ No se puede realizar la reserva. No hay habitaciones disponibles.")
+            print(f"   Para las fechas del {fecha_ingreso} (por {num_noches} noches)")
+            return False
+        
+        # Si se especifica un número de habitación, validar que esté en la lista de disponibles
+        if numero_habitacion is not None:
+            habitacion_reservada = None
+            for habitacion in habitaciones_disponibles:
+                if habitacion.numero == numero_habitacion:
+                    habitacion_reservada = habitacion
+                    break
+            
+            if not habitacion_reservada:
+                print(f"❌ La habitación {numero_habitacion} no está disponible para las fechas solicitadas.")
+                return False
+            
+            print(f"✅ Habitación {numero_habitacion} confirmada para la reserva.")
+        else:
+            # Si no se especifica habitación, mostrar opciones y pedir selección
+            print(f"\n📋 Habitaciones disponibles:")
+            for habitacion in habitaciones_disponibles:
+                print(f"   - {habitacion.info_habitacion()}")
+            
+            numeros_disponibles = [h.numero for h in habitaciones_disponibles]
+            print(f"\nNúmeros de habitaciones disponibles: {numeros_disponibles}")
+            
+            # Pedir selección de habitación
             while True:
-                numero_habitacion = input("Ingrese el número de habitación: ")
-                numero_habitacion = util.validar_numero(numero_habitacion, "Número de habitación")
-                if numero_habitacion:
-                    if numero_habitacion in habitaciones_disponibles:
-                        habitacion_reservada = habitaciones_disponibles[numero_habitacion]
+                numero_habitacion_input = input("Ingrese el número de habitación: ")
+                numero_habitacion_input = util.validar_numero(numero_habitacion_input, "Número de habitación")
+                if numero_habitacion_input:
+                    if numero_habitacion_input in numeros_disponibles:
+                        for habitacion in habitaciones_disponibles:
+                            if habitacion.numero == numero_habitacion_input:
+                                habitacion_reservada = habitacion
+                                break
                         break
                     else:
                         print(f"Número de habitación inválido. Debe ser uno de {numeros_disponibles}")
-        else:
-            print("No hay habitaciones disponibles")
-            return False
         
         # Crear reserva
         nueva_reserva = Reserva(
             self.next_reserva_id,
             huesped,
-            habitacion_reservada,  # Corregido el nombre de la variable
+            habitacion_reservada,
             fecha_ingreso,
             num_noches
         )
-        huesped.reservas.append(nueva_reserva)  # Agregar reserva al huésped
-        habitacion_reservada.disponible = False
+        
+        # Agregar reserva al huésped y a la habitación
+        huesped.reservas.append(nueva_reserva)
+        habitacion_reservada.agregar_reserva(nueva_reserva)
         self.reservas.append(nueva_reserva)
         self.next_reserva_id += 1
+        
+        # Agregar el costo de la reserva al efectivo del hotel
+        self.efectivo += nueva_reserva.costo_total
+        
+        print(f"🎉 Reserva realizada exitosamente!")
+        print(f"ID de reserva: {nueva_reserva.id}")
+        print(f"Habitación: {habitacion_reservada.numero}")
+        print(f"Fechas: {nueva_reserva.fecha_ingreso} al {nueva_reserva.fecha_salida}")
+        print(f"Costo total: ${nueva_reserva.costo_total}")
+        print(f"💰 Efectivo del hotel: ${self.efectivo}")
+        
         return nueva_reserva
     
     def generar_comprobante(self, reserva):
@@ -259,7 +343,7 @@ class SistemaHotel:
     
     def registrar_salida(self, reserva):
         reserva.activa = False
-        reserva.habitacion.disponible = True
+        reserva.habitacion.liberar_reserva(reserva)
         return Factura(reserva)
     
     def autenticar_usuario(self, usuario, contrasena):
@@ -269,15 +353,23 @@ class SistemaHotel:
         reportes = {}
         reportes["total_huespedes"] = len(self.huespedes)
         
-        habitaciones_ocupadas = sum(1 for h in self.habitaciones if not h.disponible)
-        reportes["habitaciones_ocupadas"] = habitaciones_ocupadas
-        reportes["habitaciones_disponibles"] = len(self.habitaciones) - habitaciones_ocupadas
+        # Contar habitaciones con reservas activas
+        habitaciones_con_reservas_activas = 0
+        for habitacion in self.habitaciones:
+            if any(reserva.activa for reserva in habitacion.reservas_activas):
+                habitaciones_con_reservas_activas += 1
+        
+        reportes["habitaciones_con_reservas_activas"] = habitaciones_con_reservas_activas
+        reportes["habitaciones_sin_reservas"] = len(self.habitaciones) - habitaciones_con_reservas_activas
         
         reservas_activas = [r for r in self.reservas if r.activa]
         reportes["reservas_activas"] = len(reservas_activas)
         
         ingresos = sum(r.costo_total for r in reservas_activas)
         reportes["ingresos"] = ingresos
+        
+        # Agregar efectivo total del hotel
+        reportes["efectivo_total"] = self.efectivo
         
         noches = sum(r.num_noches for r in reservas_activas)
         reportes["tiempo_promedio_estancia"] = noches / len(reservas_activas) if reservas_activas else 0
@@ -448,3 +540,67 @@ class SistemaHotel:
                         print(f"Precio por noche: ${habitacion.precio_noche}")
                         print(f"Estado: {'Disponible' if habitacion.disponible else 'Ocupada'}")
                         return habitacion
+    
+    def consultar_disponibilidad(self, fecha_ingreso=None, num_noches=None, mostrar_info=True):
+        """
+        Consulta la disponibilidad de habitaciones para un rango de fechas específico
+        
+        Args:
+            fecha_ingreso: Fecha de ingreso en formato YYYY-MM-DD
+            num_noches: Número de noches
+            mostrar_info: Si True, muestra información detallada. Si False, solo retorna la lista
+            
+        Returns:
+            Lista de habitaciones disponibles
+        """
+        if not fecha_ingreso:
+            fecha_ingreso = util.pedir_fecha()
+        
+        if not num_noches:
+            while True:
+                input_noches = input("Número de noches: ")
+                if util.validar_numero(input_noches, "Número de noches"):
+                    num_noches = int(input_noches)
+                    if num_noches > 0:
+                        break
+        
+        fecha_salida = (datetime.strptime(fecha_ingreso, "%Y-%m-%d").date() + timedelta(days=num_noches)).strftime("%Y-%m-%d")
+        
+        # Separar habitaciones disponibles y ocupadas
+        habitaciones_disponibles = []
+        habitaciones_ocupadas = []
+        
+        for habitacion in self.habitaciones:
+            if habitacion.esta_disponible_en_fechas(fecha_ingreso, fecha_salida):
+                habitaciones_disponibles.append(habitacion)
+            else:
+                habitaciones_ocupadas.append(habitacion)
+        
+        # Solo mostrar información si mostrar_info es True
+        if mostrar_info:
+            print(f"\n===== DISPONIBILIDAD DEL {fecha_ingreso} AL {fecha_salida} =====")
+            
+            if habitaciones_disponibles:
+                print("\n🟢 HABITACIONES DISPONIBLES:")
+                for habitacion in habitaciones_disponibles:
+                    print(f"  - {habitacion.info_habitacion()}")
+            
+            if habitaciones_ocupadas:
+                print("\n🔴 HABITACIONES OCUPADAS:")
+                for habitacion in habitaciones_ocupadas:
+                    print(f"  - Hab. {habitacion.numero} ({habitacion.tipo}) - ${habitacion.precio_noche}/noche")
+                    # Mostrar las reservas que causan el conflicto
+                    for reserva in habitacion.reservas_activas:
+                        if reserva.activa:
+                            res_ingreso = datetime.strptime(reserva.fecha_ingreso, "%Y-%m-%d").date()
+                            res_salida = datetime.strptime(reserva.fecha_salida, "%Y-%m-%d").date()
+                            consulta_ingreso = datetime.strptime(fecha_ingreso, "%Y-%m-%d").date()
+                            consulta_salida = datetime.strptime(fecha_salida, "%Y-%m-%d").date()
+                            
+                            if not (consulta_salida <= res_ingreso or consulta_ingreso >= res_salida):
+                                print(f"    Reservada por: {reserva.huesped.nombre} {reserva.huesped.apellido}")
+                                print(f"    Del {reserva.fecha_ingreso} al {reserva.fecha_salida}")
+            
+            print(f"\nResumen: {len(habitaciones_disponibles)} disponibles, {len(habitaciones_ocupadas)} ocupadas")
+        
+        return habitaciones_disponibles

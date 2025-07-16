@@ -46,7 +46,7 @@ def validar_documento(documento: str):
         return False
 
 def validar_correo(email: str):
-    if "@" not in email or "." not in email or " " in email:
+    if "@" not in email or ".com" not in email or ".co" not in email or " " in email:
         print("El correo electrónico no debe tener espacios y debe contener '@' y '.'")
         return False
     else:

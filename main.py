@@ -48,10 +48,11 @@ def menu_administracion():
         print("3. Consultar huespedes")
         print("4. Visualizar reservas")
         print("5. Visualizar habitaciones")
-        print("6. Generar reportes")
+        print("6. Consultar disponibilidad")
+        print("7. Generar reportes")
         print("Enter para salir")
         opcion = input("Seleccione una opción: ")
-        if not opcion in ["1", "2", "3", "4", "5", "6", ""]:
+        if not opcion in ["1", "2", "3", "4", "5", "6", "7", ""]:
             print("Opción no válida. Saliendo del sistema.")
             return
         match opcion:
@@ -79,6 +80,10 @@ def menu_administracion():
                 habitacion = hotel.visualizar_habitaciones()
                 input("Enter para continuar...")
             case "6":
+                print("Consultando disponibilidad...")
+                hotel.consultar_disponibilidad()
+                input("Enter para continuar...")
+            case "7":
                 print("Generando reportes...")
                 reportes = hotel.generar_reportes()
                 print("\nReportes administrativos:")
