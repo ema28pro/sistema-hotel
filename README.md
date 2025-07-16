@@ -245,6 +245,7 @@ Para reportar bugs o solicitar nuevas funcionalidades, por favor crear un issue 
 - 16/07/2025: Last Seen Time
     Agregar clases y funcionalidades para la gestión de huéspedes, habitaciones y reservas
 
+<div align="right"><sub >Made with patience and code ☕ — <a href="https://github.com/JessicaDiaz07/Hotel-Redenci-n" >Based on</a>.</sub></div>
+
 **Desarrollado con ❤️ en Python**
 
-<div align="right"><sub >Made with patience and code ☕ — <a href="https://github.com/JessicaDiaz07/Hotel-Redenci-n" >Based on</a>.</sub></div>
