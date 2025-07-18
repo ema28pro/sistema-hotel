@@ -57,7 +57,7 @@
 ## 🛠️ Estructura del Proyecto
 
 ```
-sitema-hotel/
+sistema-hotel/
 ├── main.py                 # Interfaz principal y menús
 ├── Clases.py              # Clases del sistema (Hotel, Huésped, Reserva, etc.)
 ├── Utils.py               # Validaciones y utilidades
@@ -80,8 +80,8 @@ sitema-hotel/
 
 1. **Clonar el repositorio**:
    ```bash
-   git clone https://github.com/ema28pro/sitema-hotel
-   cd sitema-hotel
+   git clone https://github.com/ema28pro/sistema-hotel
+   cd sistema-hotel
    ```
 
 2. **Ejecutar el sistema**:
@@ -101,21 +101,25 @@ sitema-hotel/
 
 1. **Iniciar sesión** con credenciales de administrador
 2. **Opciones disponibles**:
-   - Registrar nuevo huésped
+   - **Registrar nuevo huésped** (obligatorio antes de que puedan hacer reservas)
    - Buscar huésped existente
    - Consultar lista de huéspedes
    - Visualizar todas las reservas
    - Visualizar estado de habitaciones
    - **Consultar disponibilidad por fechas**
    - Generar reportes del hotel (incluyendo efectivo total)
-   - Generar graficos
+   - Generar gráficos
 
 ### Para Huéspedes
 
-1. **Buscar su registro** por ID, nombre o documento
-2. **Opciones disponibles**:
+1. **Registro previo**: El huésped debe estar registrado en el sistema (registrado por un administrador)
+2. **Buscar su registro** por ID, nombre o documento
+3. **Opciones disponibles**:
    - Consultar sus reservas actuales
    - Realizar nueva reserva
+   - Generar comprobante de reserva
+   - Registrar entrada (check-in)
+   - Registrar salida (check-out) y obtener factura
 
 ### Proceso de Reserva
 
@@ -126,7 +130,15 @@ sitema-hotel/
 5. Elegir habitación específica de la lista de disponibles
 6. **Efectivo del hotel se incrementa automáticamente** con el costo de la reserva
 7. Confirmar reserva y generar comprobante
-8. Al finalizar estancia, registrar salida para generar factura
+8. **Todos los datos se guardan automáticamente** en los archivos CSV correspondientes
+
+### Gestión de Estancia
+
+1. **Check-in**: Registrar entrada del huésped en su fecha programada
+   - Se guarda automáticamente en `entrada.csv`
+2. **Durante la estancia**: Consultar detalles de la reserva
+3. **Check-out**: Registrar salida para generar factura final
+   - Se guarda automáticamente en `checkouts.csv`
 
 ## ✅ Validaciones Implementadas
 
@@ -138,10 +150,19 @@ sitema-hotel/
 - **Tipos de habitación**: Solo valores permitidos (sencilla, doble, suite)
 
 ## 💾 Archivos de Datos
-- **huespedes.csv**: Información personal de huéspedes
-- **historial_reservas.csv**: Historial completo de reservas
-- **entrada.csv**: Registro de check-ins
-- **checkouts.csv**: Registro de check-outs
-- **ingresos_caja.csv**: Registro de ingresos por reserva
+
+El sistema mantiene **persistencia automática** de todos los datos:
+
+- **huespedes.csv**: Información personal de huéspedes (se actualiza al registrar nuevos huéspedes)
+- **historial_reservas.csv**: Historial completo de reservas (se actualiza al crear reservas)
+- **entrada.csv**: Registro de check-ins (se actualiza al registrar entradas)
+- **checkouts.csv**: Registro de check-outs (se actualiza al registrar salidas)
+- **ingresos_caja.csv**: Registro de ingresos por reserva (se actualiza automáticamente con cada reserva)
+
+**Nota importante**: Todos los cambios se guardan automáticamente en tiempo real. No es necesario guardar manualmente.
 
 Todos los archivos usan formato CSV con separador `;` y codificación UTF-8.
+
+<div align="right"><sub >Made with patience and code ☕ — <a href="https://github.com/JessicaDiaz07/Hotel-Redenci-n" >Based on</a>.</sub></div>
+
+**Desarrollado con ❤️ en Python | Sistema de Gestión Hotelera v2.0**
