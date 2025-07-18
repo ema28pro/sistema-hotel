@@ -1,9 +1,13 @@
 <div align="center" class="text-center">
 <h1>🏨 Sistema de Gestión Hotelera</h1>
 
-<img alt="last-commit" src="https://img.shields.io/github/last-commit/ema28pro/sistema-hotel?style=flat&amp;logo=git&amp;logoColor=white&amp;color=0080ff" class="inline-block mx-1" style="margin: 0px 2px;">
-<img alt="repo-top-language" src="https://img.shields.io/github/languages/top/ema28pro/sistema-hotel?style=flat&amp;color=0080ff" class="inline-block mx-1" style="margin: 0px 2px;">
-<img alt="repo-language-count" src="https://img.shields.io/github/languages/count/ema28pro/sistema-hotel?style=flat&amp;color=0080ff" class="inline-block mx-1" style="margin: 0px 2px;">
+<img alt="last-commit" title="Last Commit" src="https://img.shields.io/github/last-commit/ema28pro/sistema-hotel?style=flat&amp;logo=git&amp;logoColor=white&amp;color=0080ff" class="inline-block mx-1" style="margin: 0px 2px;">
+<img alt="repo-top-language" title="Repo Top Lenguage" src="https://img.shields.io/github/languages/top/ema28pro/sistema-hotel?style=flat&amp;color=0080ff" class="inline-block mx-1" style="margin: 0px 2px;">
+<img alt="repo-language-count" title="Repo Language Count" src="https://img.shields.io/github/languages/count/ema28pro/sistema-hotel?style=flat&amp;color=0080ff" class="inline-block mx-1" style="margin: 0px 2px;">
+<img alt="gitHub-contributors" title="GitHub Contributors" src="https://img.shields.io/github/contributors/ema28pro/sistema-hotel?style=flat&amp;color=0080ff" class="inline-block mx-1" style="margin: 0px 2px;">
+<img alt="Matplotlib" title="matplotlib" src="https://img.shields.io/badge/Visualization-Matplotlib-blue" class="inline-block mx-1" style="margin: 0px 2px;">
+
+
 </div>
 
 <p align="center">Un sistema completo de gestión hotelera desarrollado en Python que permite administrar huéspedes, reservas, habitaciones y generar reportes con visualizaciones gráficas.</p>
