@@ -5,7 +5,7 @@
 <img alt="repo-top-language" title="Repo Top Lenguage" src="https://img.shields.io/github/languages/top/ema28pro/sistema-hotel?style=flat&amp;color=0080ff" class="inline-block mx-1" style="margin: 0px 2px;">
 <img alt="repo-language-count" title="Repo Language Count" src="https://img.shields.io/github/languages/count/ema28pro/sistema-hotel?style=flat&amp;color=0080ff" class="inline-block mx-1" style="margin: 0px 2px;">
 <img alt="gitHub-contributors" title="GitHub Contributors" src="https://img.shields.io/github/contributors/ema28pro/sistema-hotel?style=flat&amp;color=0080ff" class="inline-block mx-1" style="margin: 0px 2px;">
-<img alt="Matplotlib" title="matplotlib" src="https://img.shields.io/badge/Visualization-Matplotlib-blue" class="inline-block mx-1" style="margin: 0px 2px;">
+<img alt="Matplotlib" title="matplotlib" src="https://img.shields.io/badge/visualization-matplotlib-blue" class="inline-block mx-1" style="margin: 0px 2px;">
 
 
 </div>
