@@ -1,12 +1,6 @@
-<div align="center" class="text-center">
-<h1>🏨 Sistema de Gestión Hotelera</h1>
+# 🏨 Sistema de Gestión Hotelera
 
-<img alt="last-commit" src="https://img.shields.io/github/last-commit/ema28pro/sistema-hotel?style=flat&amp;logo=git&amp;logoColor=white&amp;color=0080ff" class="inline-block mx-1" style="margin: 0px 2px;">
-<img alt="repo-top-language" src="https://img.shields.io/github/languages/top/ema28pro/sistema-hotel?style=flat&amp;color=0080ff" class="inline-block mx-1" style="margin: 0px 2px;">
-<img alt="repo-language-count" src="https://img.shields.io/github/languages/count/ema28pro/sistema-hotel?style=flat&amp;color=0080ff" class="inline-block mx-1" style="margin: 0px 2px;">
-</div>
-
-<p align="center">Un sistema completo de gestión hotelera desarrollado en Python que permite administrar huéspedes, reservas, habitaciones y generar reportes con visualizaciones gráficas.</p>
+Un sistema completo de gestión hotelera desarrollado en Python que permite administrar huéspedes, reservas, habitaciones y generar reportes con visualizaciones gráficas.
 
 ## 📋 Características Principales
 
@@ -43,15 +37,10 @@
 
 **Análisis de archivos CSV:**
 3. **Gráfico de líneas** - Check-outs por día (archivo: checkouts.csv)
-
 4. **Barras horizontales** - Top 10 huéspedes por noches reservadas
-
 5. **Gráfico de dispersión** - Relación noches vs total pagado (archivo: historial_reservas.csv)
-
 6. **Gráfico circular** - Ingresos por tipo de habitación (archivo: ingresos_caja.csv)
-
 7. **Histograma** - Distribución de duración de estancias (archivo: historial_reservas.csv)
-
 8. **Gráfico combinado** - Ingresos diarios (barras) + huéspedes por día (línea) (archivos: ingresos_caja.csv y checkouts.csv)
 
 ## 🛠️ Estructura del Proyecto
@@ -72,22 +61,14 @@ sitema-hotel/
 
 ## 🚀 Instalación y Ejecución
 
-### Requisitos Previos
-- Python 3.8 o superior
-- Módulos estándar de Python (datetime)
+### Requisitos
+- Python 3.8+
+- matplotlib (para gráficos): `pip install matplotlib`
 
-### Pasos para Ejecutar
-
-1. **Clonar el repositorio**:
-   ```bash
-   git clone https://github.com/ema28pro/sitema-hotel
-   cd sitema-hotel
-   ```
-
-2. **Ejecutar el sistema**:
-   ```bash
-   python main.py
-   ```
+### Ejecutar
+```bash
+python main.py
+```
 
 ## 🔑 Credenciales
 
@@ -95,47 +76,31 @@ sitema-hotel/
 - `admin` / `admin123`
 - `luna` / `luna123`
 
-## 📱 Guía de Uso
+### Huéspedes de Prueba
+- Juan Pérez (Doc: 12345678)
+- María García (Doc: 87654321)
+- Carlos Martínez (Doc: 11223344)
+- Y más... (ver huespedes.csv)
 
-### Para Administradores
+## 📱 Guía Rápida
 
-1. **Iniciar sesión** con credenciales de administrador
-2. **Opciones disponibles**:
-   - Registrar nuevo huésped
-   - Buscar huésped existente
-   - Consultar lista de huéspedes
-   - Visualizar todas las reservas
-   - Visualizar estado de habitaciones
-   - **Consultar disponibilidad por fechas**
-   - Generar reportes del hotel (incluyendo efectivo total)
-   - Generar graficos
+### Administradores
+1. Iniciar sesión
+2. Registrar/buscar huéspedes
+3. Visualizar reservas y habitaciones
+4. Generar reportes y gráficos
 
-### Para Huéspedes
-
-1. **Buscar su registro** por ID, nombre o documento
-2. **Opciones disponibles**:
-   - Consultar sus reservas actuales
-   - Realizar nueva reserva
+### Huéspedes
+1. Buscar por documento/nombre
+2. Consultar reservas existentes
+3. Realizar nuevas reservas
 
 ### Proceso de Reserva
-
-1. Seleccionar fechas de ingreso (formato: YYYY-MM-DD)
-2. Especificar número de noches
-3. **Sistema verifica automáticamente disponibilidad** en las fechas solicitadas
-4. **Mostrar habitaciones disponibles** con información detallada
-5. Elegir habitación específica de la lista de disponibles
-6. **Efectivo del hotel se incrementa automáticamente** con el costo de la reserva
-7. Confirmar reserva y generar comprobante
-8. Al finalizar estancia, registrar salida para generar factura
-
-## ✅ Validaciones Implementadas
-
-- **Nombres y apellidos**: Solo letras, mínimo 3 caracteres
-- **Documentos**: 3-15 dígitos numéricos
-- **Correos**: Formato válido con @ y .
-- **Teléfonos**: 7-15 dígitos numéricos
-- **Fechas**: Formato YYYY-MM-DD, no anteriores a hoy
-- **Tipos de habitación**: Solo valores permitidos (sencilla, doble, suite)
+1. Seleccionar fechas (YYYY-MM-DD)
+2. Especificar noches
+3. Sistema verifica disponibilidad
+4. Elegir habitación disponible
+5. Confirmar y generar comprobante
 
 ## 💾 Archivos de Datos
 - **huespedes.csv**: Información personal de huéspedes
