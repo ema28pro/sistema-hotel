@@ -38,21 +38,25 @@
 ### 📊 Sistema de Gráficos (8 Visualizaciones)
 
 **Datos en tiempo real:**
-1. **Gráfico de barras** - Habitaciones ocupadas por tipo (sencilla/doble/suite)
-2. **Gráfico circular** - Distribución habitaciones ocupadas vs disponibles
+
+   1. **Gráfico de barras** - Habitaciones ocupadas por tipo (sencilla/doble/suite)
+
+   2. **Gráfico circular** - Distribución habitaciones ocupadas vs disponibles
+
 
 **Análisis de archivos CSV:**
-3. **Gráfico de líneas** - Check-outs por día (archivo: checkouts.csv)
 
-4. **Barras horizontales** - Top 10 huéspedes por noches reservadas
+   3. **Gráfico de líneas** - Check-outs por día (archivo: checkouts.csv)
 
-5. **Gráfico de dispersión** - Relación noches vs total pagado (archivo: historial_reservas.csv)
+   4. **Barras horizontales** - Top 10 huéspedes por noches reservadas
 
-6. **Gráfico circular** - Ingresos por tipo de habitación (archivo: ingresos_caja.csv)
+   5. **Gráfico de dispersión** - Relación noches vs total pagado (archivo: historial_reservas.csv)
 
-7. **Histograma** - Distribución de duración de estancias (archivo: historial_reservas.csv)
+   6. **Gráfico circular** - Ingresos por tipo de habitación (archivo: ingresos_caja.csv)
 
-8. **Gráfico combinado** - Ingresos diarios (barras) + huéspedes por día (línea) (archivos: ingresos_caja.csv y checkouts.csv)
+   7. **Histograma** - Distribución de duración de estancias (archivo: historial_reservas.csv)
+
+   8. **Gráfico combinado** - Ingresos diarios (barras) + huéspedes por día (línea) (archivos: ingresos_caja.csv y checkouts.csv)
 
 ## 🛠️ Estructura del Proyecto
 
@@ -140,11 +144,11 @@ sistema-hotel/
 3. **Check-out**: Registrar salida para generar factura final
    - Se guarda automáticamente en `checkouts.csv`
 
-## ✅ Validaciones Implementadas
+## ✅ Validaciones
 
 - **Nombres y apellidos**: Solo letras, mínimo 3 caracteres
 - **Documentos**: 3-15 dígitos numéricos
-- **Correos**: Formato válido con @ y .
+- **Correos**: Formato válido con @ y .com o .co
 - **Teléfonos**: 7-15 dígitos numéricos
 - **Fechas**: Formato YYYY-MM-DD, no anteriores a hoy
 - **Tipos de habitación**: Solo valores permitidos (sencilla, doble, suite)
