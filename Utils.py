@@ -120,4 +120,4 @@ def pedir_tipo_habitacion():
             else:
                 print(f"Tipo de habitación inválido. Debe ser uno de ({', '.join(TIPOS_HABITACION)})")
 
-# print(pedir_tipo_habitacion())  # For testing purposes
+# print(pedir_tipo_habitacion())

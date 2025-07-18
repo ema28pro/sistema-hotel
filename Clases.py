@@ -1,6 +1,14 @@
 from datetime import date, timedelta, datetime
+import csv
 import Utils as util
 from Utils import TIPOS_HABITACION
+import matplotlib.pyplot as plt
+
+REGISTRO_ENTRADAS = "registros/entradas.csv"
+REGISTRO_CHECKOUTS = "registros/checkouts.csv"
+REGISTRO_INGRESOS_CAJA = "registros/ingresos_caja.csv"
+REGISTRO_HISTORIAL_RESERVAS = "registros/historial_reservas.csv"
+REGISTRO_HUESPEDES = "registros/huespedes.csv"
 
 class Huesped:
     def __init__(self, id, nombre, apellido, documento, correo, telefono):
@@ -19,7 +27,12 @@ class Huesped:
             
         print(f"\n===== RESERVAS DE {self.nombre.upper()} {self.apellido.upper()} =====")
         for reserva in self.reservas:
-            estado = "Activa" if reserva.activa else "Finalizada"
+            if reserva.activa is None:
+                estado = "Finalizada"
+            elif reserva.activa is True:
+                estado = "Activa"
+            else:  # reserva.activa is False
+                estado = "Pendiente de entrada"
             print(f"ID: {reserva.id} - Hab: {reserva.habitacion.numero} - {reserva.fecha_ingreso} al {reserva.fecha_salida} - ${reserva.costo_total} - {estado}")
         
         id_reserva = input("\nSeleccione una reserva por ID o Enter para continuar... ")
@@ -48,7 +61,13 @@ class Huesped:
                     print(f"Fecha salida: {reserva.fecha_salida}")
                     print(f"Noches: {reserva.num_noches}")
                     print(f"Costo total: ${reserva.costo_total}")
-                    print(f"Estado: {'Activa' if reserva.activa else 'Finalizada'}")
+                    if reserva.activa is None:
+                        estado = "Finalizada"
+                    elif reserva.activa is True:
+                        estado = "Activa"
+                    else:  # reserva.activa is False
+                        estado = "Pendiente de entrada"
+                    print(f"Estado: {estado}")
                     return reserva 
             print(f"No se encontró una reserva con ID {id_reserva}.")
             return None
@@ -68,7 +87,7 @@ class Habitacion:
         fecha_salida_dt = datetime.strptime(fecha_salida, "%Y-%m-%d").date()
         
         for reserva in self.reservas_activas:
-            if not reserva.activa:
+            if reserva.activa is None:  # Saltar reservas finalizadas (cliente registró salida)
                 continue
                 
             reserva_ingreso = datetime.strptime(reserva.fecha_ingreso, "%Y-%m-%d").date()
@@ -90,19 +109,20 @@ class Habitacion:
             reserva.activa = False
     
     def info_habitacion(self):
-        # Obtener reservas activas
-        reservas_activas = [r for r in self.reservas_activas if r.activa]
+        # Obtener reservas activas (incluyendo pendientes de entrada pero excluyendo finalizadas)
+        reservas_activas = [r for r in self.reservas_activas if r.activa is not None]
         
         if reservas_activas:
             info = f"Hab. {self.numero} ({self.tipo}) - ${self.precio_noche}/noche - {len(reservas_activas)} reserva(s):"
             for i, reserva in enumerate(reservas_activas, 1):
-                info += f"\n    {i}. {reserva.fecha_ingreso} al {reserva.fecha_salida} ({reserva.huesped.nombre} {reserva.huesped.apellido})"
+                estado = "Activa" if reserva.activa else "Pendiente de entrada"
+                info += f"\n    {i}. {reserva.fecha_ingreso} al {reserva.fecha_salida} ({reserva.huesped.nombre} {reserva.huesped.apellido}) - {estado}"
             return info
         else:
             return f"Hab. {self.numero} ({self.tipo}) - ${self.precio_noche}/noche - Disponible"
 
 class Reserva:
-    def __init__(self, id_reserva, huesped, habitacion, fecha_ingreso, num_noches, activa=True):
+    def __init__(self, id_reserva, huesped, habitacion, fecha_ingreso, num_noches, activa=False):
         self.id = id_reserva
         self.huesped = huesped
         self.habitacion = habitacion
@@ -173,7 +193,7 @@ class SistemaHotel:
         
         print("\n===== LISTA DE HUÉSPEDES =====")
         for huesped in self.huespedes:
-            num_reservas_activas = len([r for r in huesped.reservas if r.activa])
+            num_reservas_activas = len([r for r in huesped.reservas if r.activa is True])
             print(f"ID: {huesped.id} - {huesped.nombre} {huesped.apellido} - Doc: {huesped.documento} - Email: {huesped.correo} - Reservas activas: {num_reservas_activas}")
         
         id_huesped = input("\nSeleccione un huésped por ID o Enter para continuar... ")
@@ -199,7 +219,7 @@ class SistemaHotel:
                     print(f"Email: {huesped.correo}")
                     print(f"Teléfono: {huesped.telefono}")
                     print(f"Total de reservas: {len(huesped.reservas)}")
-                    print(f"Reservas activas: {len([r for r in huesped.reservas if r.activa])}")
+                    print(f"Reservas activas: {len([r for r in huesped.reservas if r.activa is True])}")
                     return huesped
             
             print(f"No se encontró un huésped con ID {id_huesped}.")
@@ -329,6 +349,9 @@ class SistemaHotel:
         # Agregar el costo de la reserva al efectivo del hotel
         self.efectivo += nueva_reserva.costo_total
         
+        self.historial_reserva(nueva_reserva)
+        self.registro_ingreso_caja(nueva_reserva)
+        
         print(f"🎉 Reserva realizada exitosamente!")
         print(f"ID de reserva: {nueva_reserva.id}")
         print(f"Habitación: {habitacion_reservada.numero}")
@@ -341,8 +364,21 @@ class SistemaHotel:
     def generar_comprobante(self, reserva):
         return Comprobante(reserva)
     
+    def registrar_entrada(self, reserva):
+        if reserva.activa is None:
+            print("❌ La reserva ya ah sido finalizada.")
+            return
+        elif reserva.activa:
+            print("❌ Ya se ha registrado la entrada para esta reserva.")
+            return
+        else:
+            reserva.activa = True
+            self.registro_entrada(reserva)
+            print(f"✅ Reserva {reserva.id} registrada como activa.")
+    
     def registrar_salida(self, reserva):
-        reserva.activa = False
+        reserva.activa = None
+        self.registro_chekout(reserva)
         reserva.habitacion.liberar_reserva(reserva)
         return Factura(reserva)
     
@@ -353,16 +389,17 @@ class SistemaHotel:
         reportes = {}
         reportes["total_huespedes"] = len(self.huespedes)
         
-        # Contar habitaciones con reservas activas
+        # Contar habitaciones con reservas activas (incluyendo pendientes de entrada)
         habitaciones_con_reservas_activas = 0
         for habitacion in self.habitaciones:
-            if any(reserva.activa for reserva in habitacion.reservas_activas):
+            if any(reserva.activa is not None for reserva in habitacion.reservas_activas):
                 habitaciones_con_reservas_activas += 1
         
         reportes["habitaciones_con_reservas_activas"] = habitaciones_con_reservas_activas
         reportes["habitaciones_sin_reservas"] = len(self.habitaciones) - habitaciones_con_reservas_activas
         
-        reservas_activas = [r for r in self.reservas if r.activa]
+        # Solo contar reservas realmente activas (True) para ingresos y estadísticas
+        reservas_activas = [r for r in self.reservas if r.activa is True]
         reportes["reservas_activas"] = len(reservas_activas)
         
         ingresos = sum(r.costo_total for r in reservas_activas)
@@ -511,35 +548,37 @@ class SistemaHotel:
                     print(f"Fecha salida: {reserva.fecha_salida}")
                     print(f"Noches: {reserva.num_noches}")
                     print(f"Costo total: ${reserva.costo_total}")
-                    print(f"Estado: {'Activa' if reserva.activa else 'Finalizada'}")
+                    print(f"Estado: {'None' if reserva.activa is None else 'Activa' if reserva.activa else 'Inactiva'}")
                     return reserva
             
             print(f"No se encontró una reserva con ID {id_reserva}.")
             return None
         
-    def visualizar_habitaciones(self):
+    def visualizar_habitaciones(self, retornar_listas=False):
         if not self.habitaciones:
             print("No hay habitaciones registradas.")
-            return None
+            return None if not retornar_listas else ([], [])
         
-        print("\n===== LISTA DE HABITACIONES =====")
-        for habitacion in self.habitaciones:
-            print(habitacion.info_habitacion())
-        
-        numero_habitacion = input("\nSeleccione una habitación por número o Enter para continuar... ")
-        if numero_habitacion == "":
-            return
+        if retornar_listas:
+            # Retornar listas de habitaciones disponibles y ocupadas
+            habitaciones_disponibles = []
+            habitaciones_ocupadas = []
+            
+            for habitacion in self.habitaciones:
+                # Una habitación está ocupada si tiene reservas activas (activa=True)
+                tiene_reservas_activas = any(r.activa is True for r in habitacion.reservas_activas)
+                if tiene_reservas_activas:
+                    habitaciones_ocupadas.append(habitacion)
+                else:
+                    habitaciones_disponibles.append(habitacion)
+                    
+            return habitaciones_disponibles, habitaciones_ocupadas
         else:
-            numero_habitacion = util.validar_numero(numero_habitacion, "Número de habitación")
-            if numero_habitacion:
-                for habitacion in self.habitaciones:
-                    if habitacion.numero == numero_habitacion:
-                        print(f"\n===== Habitación Seleccionada =====")
-                        print(f"Número: {habitacion.numero}")
-                        print(f"Tipo: {habitacion.tipo}")
-                        print(f"Precio por noche: ${habitacion.precio_noche}")
-                        print(f"Estado: {'Disponible' if habitacion.disponible else 'Ocupada'}")
-                        return habitacion
+            print("\n===== LISTA DE HABITACIONES =====")
+            for habitacion in self.habitaciones:
+                print(habitacion.info_habitacion())
+        
+
     
     def consultar_disponibilidad(self, fecha_ingreso=None, num_noches=None, mostrar_info=True):
         """
@@ -591,16 +630,441 @@ class SistemaHotel:
                     print(f"  - Hab. {habitacion.numero} ({habitacion.tipo}) - ${habitacion.precio_noche}/noche")
                     # Mostrar las reservas que causan el conflicto
                     for reserva in habitacion.reservas_activas:
-                        if reserva.activa:
+                        if reserva.activa is not None:  # Solo reservas confirmadas (True) o pendientes de entrada (False)
                             res_ingreso = datetime.strptime(reserva.fecha_ingreso, "%Y-%m-%d").date()
                             res_salida = datetime.strptime(reserva.fecha_salida, "%Y-%m-%d").date()
                             consulta_ingreso = datetime.strptime(fecha_ingreso, "%Y-%m-%d").date()
                             consulta_salida = datetime.strptime(fecha_salida, "%Y-%m-%d").date()
                             
                             if not (consulta_salida <= res_ingreso or consulta_ingreso >= res_salida):
-                                print(f"    Reservada por: {reserva.huesped.nombre} {reserva.huesped.apellido}")
+                                estado_reserva = "Activa" if reserva.activa else "Pendiente de entrada"
+                                print(f"    Reservada por: {reserva.huesped.nombre} {reserva.huesped.apellido} ({estado_reserva})")
                                 print(f"    Del {reserva.fecha_ingreso} al {reserva.fecha_salida}")
             
             print(f"\nResumen: {len(habitaciones_disponibles)} disponibles, {len(habitaciones_ocupadas)} ocupadas")
         
         return habitaciones_disponibles
+    
+    def cargar_huespedes(self):
+        """
+        Carga los huéspedes desde el archivo CSV
+        Formato esperado: nombre;apellido;documento;correo;telefono
+        """
+        try:
+            with open(REGISTRO_HUESPEDES, "r", encoding='utf-8') as file:
+                reader = csv.reader(file, delimiter=';')
+                huespedes_cargados = 0
+                
+                for row in reader:
+                    if len(row) >= 5:  # Verificar que la fila tenga todos los campos
+                        nombre, apellido, documento, correo, telefono = row[:5]
+                        
+                        # Verificar si el huésped ya existe (por documento)
+                        huesped_existe = any(h.documento == documento for h in self.huespedes)
+                        
+                        if not huesped_existe:
+                            # Crear nuevo huésped
+                            nuevo_huesped = Huesped(
+                                self.next_huesped_id,
+                                nombre.strip(),
+                                apellido.strip(),
+                                documento.strip(),
+                                correo.strip(),
+                                telefono.strip()
+                            )
+                            self.huespedes.append(nuevo_huesped)
+                            self.next_huesped_id += 1
+                            huespedes_cargados += 1
+                        else:
+                            print(f"⚠️ Huésped con documento {documento} ya existe, omitiendo...")
+                
+                print(f"✅ Se cargaron {huespedes_cargados} huéspedes desde el archivo CSV")
+                print(f"📊 Total de huéspedes en el sistema: {len(self.huespedes)}")
+                
+        except FileNotFoundError:
+            print(f"❌ No se encontró el archivo {REGISTRO_HUESPEDES}")
+        except Exception as e:
+            print(f"❌ Error al cargar huéspedes: {str(e)}")
+    
+    def exportar_huespedes(self):
+        """
+        Exporta todos los huéspedes a un archivo CSV
+        Formato: nombre;apellido;documento;correo;telefono
+        """
+        if not self.huespedes:
+            print("❌ No hay huéspedes para exportar")
+            return False
+        
+        try:
+            nombre_archivo = f"registros/huespedes_exportados_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            
+            with open(nombre_archivo, "w", newline='', encoding='utf-8') as file:
+                writer = csv.writer(file, delimiter=';')
+                
+                # Escribir encabezados (opcional)
+                # writer.writerow(['Nombre', 'Apellido', 'Documento', 'Correo', 'Telefono'])
+                
+                # Escribir datos de huéspedes
+                for huesped in self.huespedes:
+                    writer.writerow([
+                        huesped.nombre,
+                        huesped.apellido,
+                        huesped.documento,
+                        huesped.correo,
+                        huesped.telefono
+                    ])
+            
+            print(f"✅ Huéspedes exportados exitosamente a: {nombre_archivo}")
+            print(f"📊 Total de huéspedes exportados: {len(self.huespedes)}")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error al exportar huéspedes: {str(e)}")
+            return False
+
+    def historial_reserva(self, reserva):
+        #Fecha_ingresos;Fecha_finalizacion;Tipo_habitacion;Numero_noches;Monto_total;Documento;Huesped;
+        
+        fecha_ingreso = reserva.fecha_ingreso
+        fecha_finalizacion = reserva.fecha_salida
+        tipo_habitacion = reserva.habitacion.tipo
+        numero_noches = reserva.num_noches
+        monto_total = reserva.costo_total
+        documento_huesped = reserva.huesped.documento
+        nombre_huesped = reserva.huesped.nombre
+        
+        # Guardar el registro en el archivo usando CSV writer
+        with open(REGISTRO_HISTORIAL_RESERVAS, "a", newline='', encoding='utf-8') as file:
+            writer = csv.writer(file, delimiter=';')
+            writer.writerow([fecha_ingreso, fecha_finalizacion, tipo_habitacion, numero_noches, monto_total, documento_huesped, nombre_huesped])
+    
+    def registro_entrada(self, reserva):
+        #Fecha;Hora;Documento;Huesped;
+        
+        fecha = datetime.now().strftime('%Y-%m-%d') # Genera el objeto fecha y hora actual y lo convierte a fecha string
+        hora = datetime.now().strftime('%H:%M:%S') # Genera el objeto fecha y hora actual y lo convierte a hora string
+        documento_huesped = reserva.huesped.documento
+        nombre_huesped = reserva.huesped.nombre
+        
+        # Guardar el registro en el archivo usando CSV writer
+        with open(REGISTRO_ENTRADAS, "a", newline='', encoding='utf-8') as file:
+            writer = csv.writer(file, delimiter=';')
+            writer.writerow([fecha, hora, documento_huesped, nombre_huesped])
+        
+        print(f"{fecha} : ✓ Entrada registrada para {nombre_huesped} a las {hora}")
+    
+    def registro_chekout(self, reserva):
+        #Fecha;Hora;Docuemento;Huesped;
+        
+        fecha = datetime.now().strftime('%Y-%m-%d') # Genera el objeto fecha y hora actual y lo convierte a fecha string
+        hora = datetime.now().strftime('%H:%M:%S') # Genera el objeto fecha y hora actual y lo convierte a hora string
+        documento_huesped = reserva.huesped.documento
+        nombre_huesped = reserva.huesped.nombre
+        
+        # Guardar el registro en el archivo usando CSV writer
+        with open(REGISTRO_CHECKOUTS, "a", newline='', encoding='utf-8') as file:
+            writer = csv.writer(file, delimiter=';')
+            writer.writerow([fecha, hora, documento_huesped, nombre_huesped])
+        
+        print(f"{fecha} : ✓ Checkout registrado para {nombre_huesped} a las {hora}")
+
+    def registro_ingreso_caja(self, reserva):
+        #Fecha;Hora;Tipo;Noches;Efectivo;Documento;Nombre     
+        
+        fecha = datetime.now().strftime('%Y-%m-%d')
+        hora = datetime.now().strftime('%H:%M:%S')
+        tipo_habitacion = reserva.habitacion.tipo
+        noches = reserva.num_noches
+        efectivo = reserva.costo_total
+        
+        documento_huesped = reserva.huesped.documento
+        nombre_huesped = reserva.huesped.nombre
+        
+        # Guardar el registro en el archivo usando CSV writer
+        with open(REGISTRO_INGRESOS_CAJA, "a", newline='', encoding='utf-8') as caja_file:
+            writer = csv.writer(caja_file, delimiter=';')
+            writer.writerow([fecha, hora, tipo_habitacion, noches, f"{float(efectivo):,}", documento_huesped, nombre_huesped])
+    
+    def mostrar_graficos(self):
+        print("📊 Generando gráficos...")
+        
+        # Agregar algunos datos de prueba si no existen reservas
+        if not self.reservas:
+            print("No hay datos suficientes para generar gráficos.")
+            return
+
+        # 1. Gráfico de barras - Comparación entre tipos de habitaciones ocupadas
+        # Crear diccionario dinámico basado en tipos_habitacion del hotel
+        habitaciones_ocupadas_por_tipo = {}
+        
+        # Inicializar el diccionario con los tipos disponibles
+        for tipo in self.tipos_habitacion:
+            habitaciones_ocupadas_por_tipo[tipo] = 0
+        
+        # Contar habitaciones ocupadas por tipo
+        for habitacion in self.habitaciones:
+            tiene_reservas_activas = any(r.activa is True for r in habitacion.reservas_activas)
+            if tiene_reservas_activas:
+                tipo_habitacion = habitacion.tipo.lower()
+                if tipo_habitacion in habitaciones_ocupadas_por_tipo:
+                    habitaciones_ocupadas_por_tipo[tipo_habitacion] += 1
+        
+        # Crear gráfico de barras
+        tipos = list(habitaciones_ocupadas_por_tipo.keys())
+        cantidades = list(habitaciones_ocupadas_por_tipo.values())
+        colores = ["blue", "green", "purple"][:len(tipos)]  # Asignar colores dinámicamente
+        
+        plt.figure(figsize=(10, 5))
+        plt.bar(tipos, cantidades, color=colores)
+        plt.title("Habitaciones ocupadas por tipo")
+        plt.xlabel("Tipo de habitación")
+        plt.ylabel("Cantidad ocupadas")
+        plt.show()
+
+        # 2. Pie chart ocupadas vs disponibles
+        habitaciones_disponibles, habitaciones_ocupadas = self.visualizar_habitaciones(retornar_listas=True)
+        total_ocupadas = len(habitaciones_ocupadas)
+        total_disponibles = len(habitaciones_disponibles)
+        
+        if total_ocupadas + total_disponibles > 0:
+            plt.pie([total_ocupadas, total_disponibles], labels=["Ocupadas", "Disponibles"], autopct="%1.1f%%", colors=["red", "green"])
+            plt.title("Distribución de habitaciones")
+            plt.show()
+
+        # 3. Línea: check-out por día (desde archivo de registro)
+        try:
+            with open(REGISTRO_CHECKOUTS, "r") as file:
+                lineas = file.readlines()
+            
+            if lineas:
+                fechas_checkout = []
+                for linea in lineas:
+                    if linea.strip():
+                        parts = linea.strip().split(";")
+                        if len(parts) >= 1:
+                            fecha_str = parts[0]
+                            try:
+                                fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+                                fechas_checkout.append(fecha)
+                            except ValueError:
+                                continue
+                
+                if fechas_checkout:
+                    fechas_unicas = sorted(set(fechas_checkout))
+                    conteo = [fechas_checkout.count(f) for f in fechas_unicas]
+                    plt.plot(fechas_unicas, conteo, marker='o')
+                    plt.title("Check-Outs por día")
+                    plt.xlabel("Fecha")
+                    plt.ylabel("Cantidad")
+                    plt.xticks(rotation=45)
+                    plt.tight_layout()
+                    plt.show()
+        except FileNotFoundError:
+            print("Archivo de checkouts no encontrado.")
+        except Exception as e:
+            print(f"Error: {str(e)}")
+
+        # 4. Barras horizontales: noches por huésped (Top 10)
+        noches_huesped = []
+        for reserva in self.reservas:
+            nombre_completo = f"{reserva.huesped.nombre} {reserva.huesped.apellido}"
+            noches_huesped.append((nombre_completo, reserva.num_noches))
+        
+        # Ordenar por noches descendente y tomar top 10
+        noches_huesped_sorted = sorted(noches_huesped, key=lambda x: x[1], reverse=True)[:10]
+        
+        if noches_huesped_sorted:
+            nombres = [x[0] for x in noches_huesped_sorted]
+            noches = [x[1] for x in noches_huesped_sorted]
+            plt.barh(nombres, noches, color="orange")
+            plt.title("Top 10 huéspedes por noches")
+            plt.xlabel("Noches")
+            plt.gca().invert_yaxis()
+            plt.tight_layout()
+            plt.show()
+        
+        # 5. Gráfica de dispersión: noches vs valor pagado (desde historial de reservas)
+        try:
+            with open(REGISTRO_HISTORIAL_RESERVAS, "r") as file:
+                lineas = file.readlines()
+            
+            if lineas:
+                noches_list = []
+                pagos_list = []
+                
+                for linea in lineas:
+                    if linea.strip():
+                        parts = linea.strip().split(";")
+                        if len(parts) >= 5:
+                            try:
+                                noches = int(parts[3])  # Numero_noches
+                                pago = float(parts[4])  # Monto_total
+                                noches_list.append(noches)
+                                pagos_list.append(pago)
+                            except ValueError:
+                                continue
+                
+                if noches_list and pagos_list:
+                    plt.figure(figsize=(10, 6))
+                    plt.scatter(noches_list, pagos_list, alpha=0.6, color='blue')
+                    plt.title("Relación noches vs total pagado")
+                    plt.xlabel("Noches")
+                    plt.ylabel("Valor pagado ($)")
+                    plt.grid(True, alpha=0.3)
+                    plt.show()
+        except FileNotFoundError:
+            print("Archivo de historial de reservas no encontrado.")
+        except Exception as e:
+            print(f"Error: {str(e)}")
+
+        # 6. Pie chart: ingresos por tipo de habitación (desde ingresos_caja.csv)
+        try:
+            with open(REGISTRO_INGRESOS_CAJA, "r") as file:
+                lineas = file.readlines()
+            
+            if lineas:
+                # Crear diccionario dinámico basado en tipos_habitacion
+                ingresos_por_tipo = {}
+                for tipo in self.tipos_habitacion:
+                    ingresos_por_tipo[tipo] = 0
+                
+                for linea in lineas:
+                    if linea.strip():
+                        parts = linea.strip().split(";")
+                        if len(parts) >= 5:
+                            try:
+                                tipo_habitacion = parts[2].lower()  # Tipo
+                                efectivo_str = parts[4].replace(',', '')  # Efectivo
+                                efectivo = float(efectivo_str)
+                                
+                                if tipo_habitacion in ingresos_por_tipo:
+                                    ingresos_por_tipo[tipo_habitacion] += efectivo
+                            except ValueError:
+                                continue
+                
+                # Filtrar tipos con ingresos > 0
+                tipos_con_ingresos = {k: v for k, v in ingresos_por_tipo.items() if v > 0}
+                
+                if tipos_con_ingresos:
+                    tipos = list(tipos_con_ingresos.keys())
+                    valores = list(tipos_con_ingresos.values())
+                    colores = ["lightblue", "lightcoral", "lightgreen"][:len(tipos)]
+                    
+                    plt.figure(figsize=(8, 8))
+                    plt.pie(valores, labels=tipos, autopct="%1.1f%%", colors=colores)
+                    plt.title("Ingresos por tipo de habitación")
+                    plt.show()
+        except FileNotFoundError:
+            print("Archivo de ingresos de caja no encontrado.")
+        except Exception as e:
+            print(f"Error: {str(e)}")
+
+        # 7. Histograma: duración de estancias (desde historial de reservas)
+        try:
+            with open(REGISTRO_HISTORIAL_RESERVAS, "r") as file:
+                lineas = file.readlines()
+            
+            if lineas:
+                noches_list = []
+                
+                for linea in lineas:
+                    if linea.strip():
+                        parts = linea.strip().split(";")
+                        if len(parts) >= 4:
+                            try:
+                                noches = int(parts[3])  # Numero_noches
+                                noches_list.append(noches)
+                            except ValueError:
+                                continue
+                
+                if noches_list:
+                    plt.figure(figsize=(10, 6))
+                    max_noches = max(noches_list)
+                    bins = range(1, max_noches + 2)
+                    plt.hist(noches_list, bins=bins, edgecolor="black", alpha=0.7, color='skyblue')
+                    plt.title("Distribución de duración de estancias")
+                    plt.xlabel("Noches")
+                    plt.ylabel("Cantidad de huéspedes")
+                    plt.grid(True, alpha=0.3)
+                    plt.show()
+        except FileNotFoundError:
+            print("Archivo de historial de reservas no encontrado.")
+        except Exception as e:
+            print(f"Error: {str(e)}")
+
+        # 8. Gráfica combinada: ingresos diarios (barras) + huéspedes por día (línea)
+        try:
+            # Leer ingresos diarios desde ingresos_caja.csv
+            ingresos_por_dia = {}
+            with open(REGISTRO_INGRESOS_CAJA, "r") as file:
+                lineas = file.readlines()
+                
+                for linea in lineas:
+                    if linea.strip():
+                        parts = linea.strip().split(";")
+                        if len(parts) >= 5:
+                            try:
+                                fecha_str = parts[0]
+                                fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+                                efectivo_str = parts[4].replace(',', '')
+                                efectivo = float(efectivo_str)
+                                
+                                if fecha in ingresos_por_dia:
+                                    ingresos_por_dia[fecha] += efectivo
+                                else:
+                                    ingresos_por_dia[fecha] = efectivo
+                            except Exception as e:
+                                print(f"Error: {str(e)}")
+                                continue
+            
+            # Leer checkouts diarios
+            checkouts_por_dia = {}
+            with open(REGISTRO_CHECKOUTS, "r") as file:
+                lineas = file.readlines()
+                
+                for linea in lineas:
+                    if linea.strip():
+                        parts = linea.strip().split(";")
+                        if len(parts) >= 1:
+                            try:
+                                fecha_str = parts[0]
+                                fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
+                                
+                                if fecha in checkouts_por_dia:
+                                    checkouts_por_dia[fecha] += 1
+                                else:
+                                    checkouts_por_dia[fecha] = 1
+                            except Exception as e:
+                                print(f"Error: {str(e)}")
+                                continue
+            
+            # Combinar fechas y crear gráfico
+            todas_fechas = sorted(set(list(ingresos_por_dia.keys()) + list(checkouts_por_dia.keys())))
+            
+            if todas_fechas:
+                ingresos = [ingresos_por_dia.get(fecha, 0) for fecha in todas_fechas]
+                huespedes = [checkouts_por_dia.get(fecha, 0) for fecha in todas_fechas]
+                
+                fig, ax1 = plt.subplots(figsize=(12, 6))
+                
+                # Gráfico de barras para ingresos
+                ax1.bar(todas_fechas, ingresos, color="lightblue", alpha=0.7, label="Ingresos ($)")
+                ax1.set_xlabel("Fecha")
+                ax1.set_ylabel("Ingresos ($)", color="blue")
+                ax1.tick_params(axis='y', labelcolor="blue")
+                
+                # Segundo eje Y para huéspedes
+                ax2 = ax1.twinx()
+                ax2.plot(todas_fechas, huespedes, color="red", marker="o", linewidth=2, label="Huéspedes")
+                ax2.set_ylabel("Cantidad de huéspedes", color="red")
+                ax2.tick_params(axis='y', labelcolor="red")
+                
+                plt.title("Ingresos diarios vs Cantidad de huéspedes")
+                plt.xticks(rotation=45)
+                plt.tight_layout()
+                plt.show()
+                
+        except FileNotFoundError:
+            print("Archivos de registro no encontrados para gráfico combinado.")
+        except Exception as e:
+            print(f"Error: {str(e)}")
